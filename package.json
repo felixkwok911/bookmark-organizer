@@ -1,0 +1,13 @@
+{
+  "name": "bookmark-organizer",
+  "version": "0.1.0",
+  "description": "Automatically organize local browser bookmarks into a cleaned export and audit report.",
+  "type": "module",
+  "bin": {
+    "bookmark-organizer": "./bookmark-organizer.mjs"
+  },
+  "scripts": {
+    "start": "node ./bookmark-organizer.mjs",
+    "scan": "node ./bookmark-organizer.mjs --no-write"
+  }
+}
