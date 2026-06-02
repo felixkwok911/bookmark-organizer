@@ -56,6 +56,13 @@ npm start
 - Dead links: 18
 ```
 
+## More
+
+- [How it works](docs/how-it-works.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Sample report](examples/sample-report.md)
+- [Sample cleanup report](examples/sample-cleanup-report.md)
+
 ## Supported sources
 
 - Google Chrome

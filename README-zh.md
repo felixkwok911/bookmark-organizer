@@ -56,6 +56,13 @@ npm start
 - Dead links: 18
 ```
 
+## 更多
+
+- [工作原理](docs/how-it-works.md)
+- [排障说明](docs/troubleshooting.md)
+- [示例报告](examples/sample-report.md)
+- [示例清理报告](examples/sample-cleanup-report.md)
+
 ## 支持来源
 
 - Google Chrome

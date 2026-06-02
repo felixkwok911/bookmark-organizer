@@ -258,7 +258,12 @@ function renderReport(summary) {
   lines.push('## Cleanup Highlights');
   lines.push(`- Top domain: ${summary.topDomains[0]?.[0] ?? 'n/a'} (${summary.topDomains[0]?.[1] ?? 0})`);
   lines.push(`- Top folder: ${summary.topFolders[0]?.[0] ?? 'n/a'} (${summary.topFolders[0]?.[1] ?? 0})`);
-  lines.push(`- Browser profiles detected: ${summary.byBrowser.length}`);
+  lines.push(`- Browser profiles detected: ${summary.browserProfiles.length}`);
+  lines.push('');
+  lines.push('## Browser Coverage');
+  for (const [label, count] of summary.browserProfiles) {
+    lines.push(`- ${label}: ${count}`);
+  }
   lines.push('');
   lines.push('## Top Domains');
   for (const [host, count] of summary.topDomains.slice(0, 12)) {
@@ -376,10 +381,14 @@ async function main() {
   }
   const topFolders = [...folderCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
-  const byBrowser = new Map();
+  const browserProfiles = new Map();
   for (const source of sources) {
     const key = `${source.browser} / ${profileLabel(source)}`;
-    byBrowser.set(key, (byBrowser.get(key) || 0) + 1);
+    browserProfiles.set(key, 0);
+  }
+  for (const item of unique) {
+    const key = `${item.source.browser} / ${profileLabel(item.source)}`;
+    browserProfiles.set(key, (browserProfiles.get(key) || 0) + 1);
   }
 
   const summary = {
@@ -391,7 +400,7 @@ async function main() {
     topDomains,
     topFolders,
     duplicateExamples,
-    byBrowser: [...byBrowser.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    browserProfiles: [...browserProfiles.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     outDir: args.outDir,
     generatedAt: new Date().toISOString(),
   };
