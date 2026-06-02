@@ -38,6 +38,7 @@ function parseArgs(argv) {
     write: true,
     skipLinkCheck: false,
     limit: Infinity,
+    json: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -54,6 +55,8 @@ function parseArgs(argv) {
       i += 1;
     } else if (current === '--help') {
       args.help = true;
+    } else if (current === '--json') {
+      args.json = true;
     }
   }
 
@@ -154,6 +157,10 @@ function sourceScore(source) {
   return 1;
 }
 
+function profileLabel(source) {
+  return source.profile === 'Default' ? 'Default' : source.profile;
+}
+
 function pickCanonical(existing, candidate) {
   const existingScore = scoreBookmark(existing);
   const candidateScore = scoreBookmark(candidate);
@@ -165,6 +172,7 @@ function scoreBookmark(bookmark) {
   if (bookmark.title && bookmark.title !== bookmark.url) score += 2;
   if (bookmark.folderTrail.length > 1) score += 1;
   if (bookmark.dateAdded) score += 1;
+  if (bookmark.host && bookmark.host !== 'unknown') score += 1;
   score += bookmark.sourcePriority;
   return score;
 }
@@ -234,6 +242,7 @@ function renderReport(summary) {
   const lines = [];
   lines.push('# Bookmark Organizer Report');
   lines.push('');
+  lines.push(`- Generated at: ${summary.generatedAt}`);
   lines.push(`- Sources scanned: ${summary.sources.length}`);
   lines.push(`- Bookmarks discovered: ${summary.discovered}`);
   lines.push(`- Unique bookmarks kept: ${summary.unique}`);
@@ -246,9 +255,28 @@ function renderReport(summary) {
     lines.push(`- ${source.browser} / ${source.profile} - \`${source.filePath}\``);
   }
   lines.push('');
+  lines.push('## Cleanup Highlights');
+  lines.push(`- Top domain: ${summary.topDomains[0]?.[0] ?? 'n/a'} (${summary.topDomains[0]?.[1] ?? 0})`);
+  lines.push(`- Top folder: ${summary.topFolders[0]?.[0] ?? 'n/a'} (${summary.topFolders[0]?.[1] ?? 0})`);
+  lines.push(`- Browser profiles detected: ${summary.byBrowser.length}`);
+  lines.push('');
   lines.push('## Top Domains');
   for (const [host, count] of summary.topDomains.slice(0, 12)) {
     lines.push(`- ${host}: ${count}`);
+  }
+  if (summary.topFolders.length > 0) {
+    lines.push('');
+    lines.push('## Top Folders');
+    for (const [folder, count] of summary.topFolders.slice(0, 12)) {
+      lines.push(`- ${folder}: ${count}`);
+    }
+  }
+  if (summary.duplicateExamples.length > 0) {
+    lines.push('');
+    lines.push('## Duplicate Examples');
+    for (const item of summary.duplicateExamples.slice(0, 12)) {
+      lines.push(`- ${item.title} - ${item.normalizedUrl}`);
+    }
   }
   if (summary.deadLinks.length > 0) {
     lines.push('');
@@ -264,7 +292,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     console.log([
-      'Usage: bookmark-organizer [--out <dir>] [--no-write] [--skip-link-check] [--limit <n>]',
+      'Usage: bookmark-organizer [--out <dir>] [--no-write] [--skip-link-check] [--limit <n>] [--json]',
       '',
       'By default the tool scans Chromium-family bookmark stores on macOS and writes a cleaned export to out/.',
     ].join('\n'));
@@ -288,16 +316,24 @@ async function main() {
         sourcePriority,
         normalizedUrl: normalizeUrl(item.url),
         host: hostFromUrl(item.url),
+        folder: item.folderTrail.slice(1).join(' / ') || item.folderTrail[0] || 'root',
       });
     }
   }
 
   const deduped = new Map();
+  const duplicateExamples = [];
   for (const item of discovered) {
     const existing = deduped.get(item.normalizedUrl);
     if (!existing) {
       deduped.set(item.normalizedUrl, item);
       continue;
+    }
+    if (duplicateExamples.length < 24) {
+      duplicateExamples.push({
+        title: item.title,
+        normalizedUrl: item.normalizedUrl,
+      });
     }
     deduped.set(item.normalizedUrl, pickCanonical(existing, item));
   }
@@ -333,6 +369,19 @@ async function main() {
     .map(([host, items]) => [host, items.length])
     .sort((a, b) => b[1] - a[1]);
 
+  const folderCounts = new Map();
+  for (const item of unique) {
+    const folder = item.folder || 'root';
+    folderCounts.set(folder, (folderCounts.get(folder) || 0) + 1);
+  }
+  const topFolders = [...folderCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  const byBrowser = new Map();
+  for (const source of sources) {
+    const key = `${source.browser} / ${profileLabel(source)}`;
+    byBrowser.set(key, (byBrowser.get(key) || 0) + 1);
+  }
+
   const summary = {
     sources,
     discovered: discovered.length,
@@ -340,7 +389,11 @@ async function main() {
     duplicatesRemoved: discovered.length - unique.length,
     deadLinks,
     topDomains,
+    topFolders,
+    duplicateExamples,
+    byBrowser: [...byBrowser.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     outDir: args.outDir,
+    generatedAt: new Date().toISOString(),
   };
 
   const report = renderReport(summary);
@@ -351,6 +404,11 @@ async function main() {
     fs.writeFileSync(path.join(args.outDir, 'report.md'), `${report}\n`);
     console.log(`Wrote cleaned bookmarks to ${path.join(args.outDir, 'bookmarks-cleaned.html')}`);
     console.log(`Wrote report to ${path.join(args.outDir, 'report.md')}`);
+  }
+
+  if (args.json) {
+    process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+    return;
   }
 
   console.log(report);

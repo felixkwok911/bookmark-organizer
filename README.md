@@ -2,6 +2,8 @@
 
 Automatically scans local browser bookmark stores, cleans the URLs, removes duplicates, checks for dead links, and writes a sorted export plus a short audit report.
 
+It is meant to be a one-command cleanup pass for the bookmarks you already have, not a manual import workflow.
+
 ## What it does
 
 - Finds Chromium-family bookmark files on your Mac automatically
@@ -10,6 +12,25 @@ Automatically scans local browser bookmark stores, cleans the URLs, removes dupl
 - Groups results by domain for a cleaner export
 - Checks bookmarks for broken links
 - Writes a report instead of modifying your browser data in place
+- Surfaces top folders, top domains, duplicate examples, and browser profile coverage
+
+## Output
+
+The default run writes three files:
+
+- `out/bookmarks-cleaned.html` for re-importing or archiving
+- `out/bookmarks.json` for downstream scripting
+- `out/report.md` for a quick summary
+
+## Example report
+
+```md
+- Sources scanned: 4
+- Bookmarks discovered: 1,842
+- Unique bookmarks kept: 1,221
+- Duplicates removed: 621
+- Dead links: 18
+```
 
 ## Usage
 
@@ -18,18 +39,19 @@ npm install
 npm start
 ```
 
-Outputs are written to `out/` by default:
-
-- `out/bookmarks-cleaned.html`
-- `out/bookmarks.json`
-- `out/report.md`
-
 ## Options
 
 - `--no-write` print the report only
 - `--out <dir>` choose a different output directory
 - `--skip-link-check` skip network checks for dead links
 - `--limit <n>` cap the number of bookmarks checked for link status
+- `--json` emit the full summary as JSON
+
+## Design Notes
+
+- It only reads local browser data and never edits your profile files directly.
+- URL normalization removes common tracking parameters while leaving the rest intact.
+- Dead-link checks are best-effort and can be skipped if you want a fully offline run.
 
 ## Supported sources
 
@@ -39,4 +61,3 @@ Outputs are written to `out/` by default:
 - Brave Browser
 - Vivaldi
 - Opera
-
