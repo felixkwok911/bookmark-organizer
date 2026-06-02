@@ -2,6 +2,13 @@
   "name": "bookmark-organizer",
   "version": "0.1.0",
   "description": "Automatically organize local browser bookmarks into a cleaned export and audit report.",
+  "keywords": [
+    "bookmarks",
+    "browser",
+    "cleanup",
+    "macos",
+    "cli"
+  ],
   "type": "module",
   "bin": {
     "bookmark-organizer": "./bookmark-organizer.mjs"
